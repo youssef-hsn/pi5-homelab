@@ -1,0 +1,167 @@
+http:
+  routers:
+    authelia:
+      rule: "Host(`auth.youssefalhassan.com`)"
+      entryPoints: [websecure]
+      service: authelia
+      tls:
+        certResolver: letsencrypt
+
+    vaultwarden:
+      rule: "Host(`vw.youssefalhassan.com`)"
+      entryPoints: [websecure]
+      service: vaultwarden
+      tls:
+        certResolver: letsencrypt
+
+    homeassistant:
+      rule: "Host(`ha.youssefalhassan.com`)"
+      entryPoints: [websecure]
+      service: homeassistant
+      tls:
+        certResolver: letsencrypt
+
+    monetr:
+      rule: "Host(`mm.youssefalhassan.com`)"
+      entryPoints: [websecure]
+      service: monetr
+      tls:
+        certResolver: letsencrypt
+
+    traefik-dashboard:
+      rule: "Host(`proxy.youssefalhassan.com`)"
+      entryPoints: [websecure]
+      service: api@internal
+      middlewares: [authelia]
+      tls:
+        certResolver: letsencrypt
+
+    jellyfin:
+      rule: "Host(`jf.youssefalhassan.com`)"
+      entryPoints: [websecure]
+      service: jellyfin
+      tls:
+        certResolver: letsencrypt
+
+    nextcloud:
+      rule: "Host(`cloud.youssefalhassan.com`)"
+      entryPoints: [websecure]
+      service: nextcloud
+      tls:
+        certResolver: letsencrypt
+
+    firefly:
+      rule: "Host(`fin.youssefalhassan.com`)"
+      entryPoints: [websecure]
+      service: firefly
+      tls:
+        certResolver: letsencrypt
+
+    nefarious:
+      rule: "Host(`nefarious.youssefalhassan.com`)"
+      entryPoints: [websecure]
+      service: nefarious
+      tls:
+        certResolver: letsencrypt
+
+    transmission:
+      rule: "Host(`transmission.youssefalhassan.com`)"
+      entryPoints: [websecure]
+      service: transmission
+      tls:
+        certResolver: letsencrypt
+
+    jackett:
+      rule: "Host(`jackett.youssefalhassan.com`)"
+      entryPoints: [websecure]
+      service: jackett
+      tls:
+        certResolver: letsencrypt
+
+    hermes:
+      rule: "Host(`hermes.youssefalhassan.com`)"
+      entryPoints: [websecure]
+      service: hermes
+      middlewares: [hermes-login-redirect]
+      tls:
+        certResolver: letsencrypt
+
+    odysseus:
+      rule: "Host(`odysseus.youssefalhassan.com`)"
+      entryPoints: [websecure]
+      service: odysseus
+      tls:
+        certResolver: letsencrypt
+
+    open-webui:
+      rule: "Host(`ai.youssefalhassan.com`)"
+      entryPoints: [websecure]
+      service: open-webui
+      tls:
+        certResolver: letsencrypt
+
+  services:
+    authelia:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:9100"
+
+    vaultwarden:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:8081"
+
+    homeassistant:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:8123"
+
+    monetr:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:4000"
+
+    jellyfin:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:8096"
+
+    nextcloud:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:8082"
+
+    firefly:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:8080"
+
+    nefarious:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:8002"
+
+    transmission:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:9091"
+
+    jackett:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:9117"
+
+    hermes:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:8083"
+
+    odysseus:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:7000"
+
+    open-webui:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:8084"

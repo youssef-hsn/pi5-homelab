@@ -1,0 +1,16 @@
+logging:
+  level: info
+
+provider:
+  name: docker
+
+server:
+  port: 10000
+
+storage:
+  file:
+    filename: /var/sablier/sessions.json
+
+sessions:
+  defaultDuration: 10m
+  expirationInterval: 30s

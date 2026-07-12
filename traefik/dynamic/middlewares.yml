@@ -1,0 +1,27 @@
+http:
+  middlewares:
+    # Force X-Forwarded-Proto: https since Cloudflare terminates TLS before reaching Traefik on port 80
+    cloudflare-https:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+
+    authelia:
+      forwardAuth:
+        address: 'http://127.0.0.1:9100/api/authz/forward-auth'
+        trustForwardHeader: true
+        authResponseHeaders:
+          - 'Remote-User'
+          - 'Remote-Groups'
+          - 'Remote-Email'
+          - 'Remote-Name'
+
+    # Hermes uses only the password (basic) auth provider. Its dashboard auto-SSO
+    # bounces an unauthenticated root load to /auth/login (an OAuth-only route that
+    # 500s for a password provider). Rewrite that to the working /login form.
+    # Safe only because hermes has no OAuth provider — remove if one is ever added.
+    hermes-login-redirect:
+      redirectRegex:
+        regex: '^https?://([^/]+)/auth/login.*'
+        replacement: 'https://${1}/login'
+        permanent: false

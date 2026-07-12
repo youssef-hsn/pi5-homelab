@@ -1,0 +1,74 @@
+http:
+  middlewares:
+    sablier-jellyfin:
+      plugin:
+        sablier:
+          sablierUrl: "http://127.0.0.1:10000"
+          names: "jellyfin"
+          # Jellyfin takes up to 2 minutes to fully start
+          sessionDuration: "20m"
+          dynamic:
+            displayName: "Jellyfin"
+            theme: "hacker-terminal"
+            refreshFrequency: "5s"
+            showDetails: true
+
+    sablier-vaultwarden:
+      plugin:
+        sablier:
+          sablierUrl: "http://127.0.0.1:10000"
+          names: "vaultwarden"
+          sessionDuration: "5m"
+          dynamic:
+            displayName: "VaultWarden"
+            theme: "hacker-terminal"
+            refreshFrequency: "3s"
+            showDetails: true
+
+    sablier-monetr:
+      plugin:
+        sablier:
+          sablierUrl: "http://127.0.0.1:10000"
+          names: "monetr"
+          sessionDuration: "10m"
+          dynamic:
+            displayName: "Monetr"
+            theme: "hacker-terminal"
+            refreshFrequency: "3s"
+            showDetails: true
+
+    sablier-grafana:
+      plugin:
+        sablier:
+          sablierUrl: "http://127.0.0.1:10000"
+          names: "grafana"
+          sessionDuration: "15m"
+          dynamic:
+            displayName: "Grafana"
+            theme: "hacker-terminal"
+            refreshFrequency: "3s"
+            showDetails: true
+
+    sablier-firefly:
+      plugin:
+        sablier:
+          sablierUrl: "http://127.0.0.1:10000"
+          names: "firefly"
+          sessionDuration: "15m"
+          dynamic:
+            displayName: "Firefly III"
+            theme: "hacker-terminal"
+            refreshFrequency: "3s"
+            showDetails: true
+
+    sablier-nefarious:
+      plugin:
+        sablier:
+          sablierUrl: "http://127.0.0.1:10000"
+          names: "nefarious"
+          sessionDuration: "30m"
+          dynamic:
+            displayName: "Nefarious"
+            theme: "hacker-terminal"
+            refreshFrequency: "5s"
+            showDetails: true
