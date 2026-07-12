@@ -1,0 +1,23 @@
+[Unit]
+Description=Shared PostgreSQL database
+After=podman-user-wait-network-online.service
+Wants=podman-user-wait-network-online.service
+Requires=podman-user-wait-network-online.service
+
+[Container]
+ContainerName=postgres
+Image=docker.io/library/postgres:16
+Network=postgres.network
+Volume=%h/infra/postgres/data:/var/lib/postgresql/data:Z
+Volume=%h/infra/postgres/initdb:/docker-entrypoint-initdb.d:Z,ro
+EnvironmentFile=%h/infra/postgres/.env
+Environment=TZ=Asia/Beirut
+Environment=POSTGRES_USER=postgres
+PublishPort=192.168.0.69:5432:5432
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target
