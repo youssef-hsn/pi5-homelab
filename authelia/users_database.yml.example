@@ -1,0 +1,9 @@
+users:
+  youssef:
+    displayname: 'Youssef'
+    # Generate a hash with:
+    # podman run --rm authelia/authelia:latest authelia crypto hash generate argon2 --password 'newpassword'
+    password: 'CHANGEME_argon2id_hash'
+    email: 'youssef@youssefalhassan.com'
+    groups:
+      - admins
