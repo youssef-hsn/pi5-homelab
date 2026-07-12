@@ -1,0 +1,353 @@
+{
+  "title": "Pi System Overview",
+  "uid": "pi-system-overview",
+  "description": "Raspberry Pi 5 system health — Loki logs + Pyroscope profiles (Alloy, Loki, Grafana)",
+  "schemaVersion": 39,
+  "version": 1,
+  "tags": ["homelab", "system", "pi"],
+  "time": { "from": "now-1h", "to": "now" },
+  "refresh": "30s",
+  "timezone": "browser",
+  "graphTooltip": 1,
+  "templating": { "list": [] },
+  "annotations": { "list": [] },
+  "links": [
+    {
+      "title": "Podman Services",
+      "url": "/d/podman-services",
+      "type": "link",
+      "icon": "external link",
+      "targetBlank": false
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Total Logs",
+      "description": "All journald log entries in the selected time range",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "uid": "loki", "type": "loki" },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "loki", "type": "loki" },
+          "expr": "sum(count_over_time({job=\"journald\"}[$__range]))",
+          "legendFormat": "total",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Errors",
+      "description": "err + crit + alert + emerg entries",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "uid": "loki", "type": "loki" },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 20 }
+            ]
+          },
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "loki", "type": "loki" },
+          "expr": "sum(count_over_time({job=\"journald\", level=~\"err|crit|alert|emerg\"}[$__range]))",
+          "legendFormat": "errors",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Warnings",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "uid": "loki", "type": "loki" },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 10 },
+              { "color": "orange", "value": 100 }
+            ]
+          },
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "loki", "type": "loki" },
+          "expr": "sum(count_over_time({job=\"journald\", level=\"warning\"}[$__range]))",
+          "legendFormat": "warnings",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "OOM / Kernel Events",
+      "description": "Out-of-memory or kernel panic messages",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "uid": "loki", "type": "loki" },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          },
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "loki", "type": "loki" },
+          "expr": "sum(count_over_time({job=\"journald\"} |~ \"(?i)(oom|out of memory|kernel panic|segfault)\" [$__range]))",
+          "legendFormat": "oom+panic",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Log Rate by Level",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "datasource": { "uid": "loki", "type": "loki" },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["sum"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "lineWidth": 1, "fillOpacity": 10 },
+          "unit": "reqps"
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "err" },     "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] },
+          { "matcher": { "id": "byName", "options": "warning" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "yellow" } }] },
+          { "matcher": { "id": "byName", "options": "info" },    "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }] },
+          { "matcher": { "id": "byName", "options": "debug" },   "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "gray" } }] }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "loki", "type": "loki" },
+          "expr": "sum(rate({job=\"journald\"}[5m])) by (level)",
+          "legendFormat": "{{level}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Log Rate by Systemd Unit (top 10)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "datasource": { "uid": "loki", "type": "loki" },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["sum"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "lineWidth": 1, "fillOpacity": 5 },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "loki", "type": "loki" },
+          "expr": "topk(10, sum(rate({job=\"journald\", unit!=\"\"}[5m])) by (unit))",
+          "legendFormat": "{{unit}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "logs",
+      "title": "Errors & Warnings",
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 12 },
+      "datasource": { "uid": "loki", "type": "loki" },
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "loki", "type": "loki" },
+          "expr": "{job=\"journald\", level=~\"err|crit|alert|emerg|warning\"}",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "logs",
+      "title": "All System Logs",
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 12 },
+      "datasource": { "uid": "loki", "type": "loki" },
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "loki", "type": "loki" },
+          "expr": "{job=\"journald\"}",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "CPU & Memory Profiles (Pyroscope)",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 22 }
+    },
+    {
+      "id": 11,
+      "type": "flamegraph",
+      "title": "Alloy — CPU Flamegraph",
+      "description": "CPU time breakdown for the Alloy observability agent process",
+      "gridPos": { "h": 14, "w": 12, "x": 0, "y": 23 },
+      "datasource": { "uid": "pyroscope", "type": "grafana-pyroscope-datasource" },
+      "options": { "minRenderedBlockWidth": 2 },
+      "targets": [
+        {
+          "datasource": { "uid": "pyroscope", "type": "grafana-pyroscope-datasource" },
+          "profileTypeId": "process_cpu:cpu:nanoseconds:cpu:nanoseconds",
+          "labelSelector": "{service_name=\"alloy\"}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "flamegraph",
+      "title": "Loki — CPU Flamegraph",
+      "description": "CPU time breakdown for the Loki log store process",
+      "gridPos": { "h": 14, "w": 12, "x": 12, "y": 23 },
+      "datasource": { "uid": "pyroscope", "type": "grafana-pyroscope-datasource" },
+      "options": { "minRenderedBlockWidth": 2 },
+      "targets": [
+        {
+          "datasource": { "uid": "pyroscope", "type": "grafana-pyroscope-datasource" },
+          "profileTypeId": "process_cpu:cpu:nanoseconds:cpu:nanoseconds",
+          "labelSelector": "{service_name=\"loki\"}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "flamegraph",
+      "title": "Alloy — Heap Memory",
+      "description": "In-use heap memory by function for Alloy",
+      "gridPos": { "h": 14, "w": 12, "x": 0, "y": 37 },
+      "datasource": { "uid": "pyroscope", "type": "grafana-pyroscope-datasource" },
+      "options": { "minRenderedBlockWidth": 2 },
+      "targets": [
+        {
+          "datasource": { "uid": "pyroscope", "type": "grafana-pyroscope-datasource" },
+          "profileTypeId": "memory:inuse_space:bytes:space:bytes",
+          "labelSelector": "{service_name=\"alloy\"}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "flamegraph",
+      "title": "Loki — Heap Memory",
+      "description": "In-use heap memory by function for Loki",
+      "gridPos": { "h": 14, "w": 12, "x": 12, "y": 37 },
+      "datasource": { "uid": "pyroscope", "type": "grafana-pyroscope-datasource" },
+      "options": { "minRenderedBlockWidth": 2 },
+      "targets": [
+        {
+          "datasource": { "uid": "pyroscope", "type": "grafana-pyroscope-datasource" },
+          "profileTypeId": "memory:inuse_space:bytes:space:bytes",
+          "labelSelector": "{service_name=\"loki\"}",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

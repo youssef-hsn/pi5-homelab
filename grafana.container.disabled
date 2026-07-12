@@ -1,0 +1,32 @@
+[Unit]
+Description=Grafana dashboards
+After=podman-user-wait-network-online.service prometheus.service loki.service
+Wants=podman-user-wait-network-online.service
+Requires=prometheus.service loki.service
+
+[Container]
+ContainerName=grafana
+Image=docker.io/grafana/grafana:latest
+Network=observability.network
+
+Volume=grafana-data:/var/lib/grafana:Z
+Volume=%h/infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro,Z
+
+EnvironmentFile=%h/infra/observability/.env
+
+Environment=TZ=Asia/Beirut
+Environment=GF_SERVER_DOMAIN=grafana.youssefalhassan.com
+Environment=GF_SERVER_ROOT_URL=https://grafana.youssefalhassan.com
+Environment=GF_USERS_ALLOW_SIGN_UP=false
+Environment=GF_ANALYTICS_REPORTING_ENABLED=false
+Environment=GF_LOG_LEVEL=warn
+
+PublishPort=127.0.0.1:3000:3000
+
+[Service]
+Restart=on-failure
+SuccessExitStatus=SIGTERM SIGKILL
+TimeoutStartSec=60
+
+[Install]
+WantedBy=default.target

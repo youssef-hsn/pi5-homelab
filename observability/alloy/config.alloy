@@ -1,0 +1,172 @@
+// ============================================================
+// Grafana Alloy — homelab → Grafana Cloud
+// Raspberry Pi ARM64 | rootless Podman
+// Ships: host metrics (node-exporter), journald logs
+// Credentials: read from /etc/alloy/credentials.env (sys.env)
+// ============================================================
+
+// ── Host metrics (node-exporter built-in) ────────────────────
+prometheus.exporter.unix "node" {
+  rootfs_path = "/host/root"
+  procfs_path = "/host/proc"
+  sysfs_path  = "/host/sys"
+
+  filesystem {
+    fs_types_exclude     = "^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$"
+    mount_points_exclude = "^/(dev|proc|sys|var/lib/docker/.+|var/lib/containers/.+|host/(dev|proc|sys|etc))($|/)"
+    mount_timeout        = "5s"
+  }
+
+  netclass {
+    ignored_devices = "^(veth.*|cali.*|[a-f0-9]{15}|cni.*|docker.*|podman.*|flannel.*|cbr.*|br-.*)$"
+  }
+
+  netdev {
+    device_exclude = "^(veth.*|cali.*|[a-f0-9]{15}|cni.*|docker.*|podman.*|flannel.*|cbr.*|br-.*)$"
+  }
+}
+
+discovery.relabel "node" {
+  targets = prometheus.exporter.unix.node.targets
+
+  rule {
+    target_label = "instance"
+    replacement  = sys.env("HOSTNAME_LABEL")
+  }
+}
+
+prometheus.scrape "node" {
+  targets         = discovery.relabel.node.output
+  forward_to      = [prometheus.remote_write.gc.receiver]
+  scrape_interval = "60s"
+  job_name        = "integrations/node_exporter"
+}
+
+prometheus.remote_write "gc" {
+  endpoint {
+    url = sys.env("GC_PROM_URL")
+    basic_auth {
+      username = sys.env("GC_PROM_USER")
+      password = sys.env("GC_TOKEN")
+    }
+  }
+  external_labels = {
+    cluster = "homelab",
+    host    = sys.env("HOSTNAME_LABEL"),
+  }
+}
+
+// ── Journald log collection → Grafana Cloud Loki ─────────────
+loki.source.journal "journald" {
+  path          = "/run/log/journal"
+  max_age       = "12h"
+  // Custom journal fields (CONTAINER_NAME, etc.) are only accessible inside the
+  // source's relabel_rules pass — wire the rules block in here.
+  relabel_rules = loki.relabel.journald.rules
+  forward_to    = [loki.relabel.journald.receiver]
+
+  labels = {
+    job  = "integrations/journald",
+    host = "raspberrypi",
+  }
+}
+
+loki.relabel "journald" {
+  forward_to = [loki.write.gc.receiver]
+
+  // Container entries are shipped via the podman pipeline below; drop them here
+  // to avoid duplication. Host (non-container) entries pass through.
+  rule {
+    source_labels = ["__journal_container_name"]
+    regex         = ".+"
+    action        = "drop"
+  }
+
+  rule {
+    source_labels = ["__journal__systemd_unit"]
+    target_label  = "unit"
+  }
+
+  rule {
+    source_labels = ["__journal_priority_keyword"]
+    target_label  = "level"
+  }
+
+  rule {
+    source_labels = ["__journal_container_name"]
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__journal__transport"]
+    target_label  = "transport"
+  }
+}
+
+// ── Podman container logs → Loki (forks off journald via _COMM=conmon) ──
+loki.source.journal "podman" {
+  path          = "/run/log/journal"
+  max_age       = "12h"
+  matches       = "_COMM=conmon"
+  relabel_rules = loki.relabel.podman.rules
+  forward_to    = [loki.relabel.podman.receiver]
+
+  labels = {
+    job  = "podman",
+    host = sys.env("HOSTNAME_LABEL"),
+  }
+}
+
+loki.relabel "podman" {
+  forward_to = [loki.write.gc.receiver]
+
+  rule {
+    source_labels = ["__journal_container_name"]
+    regex         = "^/?(.+)$"
+    target_label  = "container"
+    replacement   = "$1"
+  }
+  rule {
+    source_labels = ["__journal_container_name"]
+    regex         = "^/?(.+)$"
+    target_label  = "service_name"
+    replacement   = "$1"
+  }
+  rule {
+    source_labels = ["__journal_container_id"]
+    target_label  = "container_id"
+  }
+  rule {
+    source_labels = ["__journal_image_name"]
+    target_label  = "image"
+  }
+  rule {
+    source_labels = ["image", "__journal_container_tag"]
+    separator     = ";"
+    regex         = ";(.+)"
+    target_label  = "image"
+    replacement   = "$1"
+  }
+  rule {
+    source_labels = ["__journal_priority_keyword"]
+    target_label  = "level"
+  }
+  rule {
+    action = "labeldrop"
+    regex  = "(__journal__boot_id|__journal__machine_id|__journal__systemd_.*|__journal__transport)"
+  }
+}
+
+loki.write "gc" {
+  endpoint {
+    url = sys.env("GC_LOKI_URL")
+    basic_auth {
+      username = sys.env("GC_LOKI_USER")
+      password = sys.env("GC_TOKEN")
+    }
+  }
+  external_labels = {
+    cluster = "homelab",
+    host    = sys.env("HOSTNAME_LABEL"),
+  }
+}

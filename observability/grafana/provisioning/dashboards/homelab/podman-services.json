@@ -1,0 +1,389 @@
+{
+  "title": "Podman Services",
+  "uid": "podman-services",
+  "description": "Per-container log monitoring. Variable $container is auto-populated from Loki labels — any container that has ever logged appears here.",
+  "schemaVersion": 39,
+  "version": 1,
+  "tags": ["homelab", "podman", "containers"],
+  "time": { "from": "now-1h", "to": "now" },
+  "refresh": "30s",
+  "timezone": "browser",
+  "graphTooltip": 1,
+  "annotations": { "list": [] },
+  "links": [
+    {
+      "title": "Pi System Overview",
+      "url": "/d/pi-system-overview",
+      "type": "link",
+      "icon": "external link",
+      "targetBlank": false
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "container",
+        "label": "Container",
+        "type": "query",
+        "datasource": { "uid": "loki", "type": "loki" },
+        "definition": "label_values({job=\"journald\", container=~\".+\"}, container)",
+        "query": {
+          "label": "container",
+          "refId": "standardVariableQuery",
+          "stream": "{job=\"journald\", container=~\".+\"}",
+          "type": 1
+        },
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "refresh": 2,
+        "sort": 1,
+        "hide": 0,
+        "current": {}
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Fleet Overview — all containers",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Log Rate — all containers",
+      "description": "Logs per second per container. Use this to spot unusually chatty or silent containers.",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 1 },
+      "datasource": { "uid": "loki", "type": "loki" },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "lineWidth": 1, "fillOpacity": 5 },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "loki", "type": "loki" },
+          "expr": "sum(rate({job=\"journald\", container=~\".+\"}[5m])) by (container)",
+          "legendFormat": "{{container}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Error Rate — all containers",
+      "description": "Error-level entries per second per container.",
+      "gridPos": { "h": 8, "w": 14, "x": 0, "y": 9 },
+      "datasource": { "uid": "loki", "type": "loki" },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["sum"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "lineWidth": 1, "fillOpacity": 10 },
+          "color": { "mode": "palette-classic" },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "loki", "type": "loki" },
+          "expr": "sum(rate({job=\"journald\", container=~\".+\", level=~\"err|crit|alert|emerg\"}[5m])) by (container)",
+          "legendFormat": "{{container}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "Error Count Ranking",
+      "description": "Total error entries per container in the selected time range, ranked worst first.",
+      "gridPos": { "h": 8, "w": 10, "x": 14, "y": 9 },
+      "datasource": { "uid": "loki", "type": "loki" },
+      "options": {
+        "footer": { "show": false },
+        "showHeader": true,
+        "sortBy": [{ "displayName": "Errors", "desc": true }]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 5 },
+              { "color": "red", "value": 50 }
+            ]
+          },
+          "custom": { "align": "auto", "displayMode": "color-background" }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "container" },
+            "properties": [
+              { "id": "custom.width", "value": 200 },
+              { "id": "custom.displayMode", "value": "auto" }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "loki", "type": "loki" },
+          "expr": "sum(count_over_time({job=\"journald\", container=~\".+\", level=~\"err|crit|alert|emerg\"}[$__range])) by (container)",
+          "legendFormat": "{{container}}",
+          "refId": "A",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        { "id": "labelsToFields", "options": { "valueLabel": "container" } },
+        { "id": "merge", "options": {} },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": { "container": "Container", "Value": "Errors" }
+          }
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "row",
+      "title": "Selected Container: $container",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 17 }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Total Logs — $container",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 18 },
+      "datasource": { "uid": "loki", "type": "loki" },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "loki", "type": "loki" },
+          "expr": "sum(count_over_time({job=\"journald\", container=~\"$container\"}[$__range]))",
+          "legendFormat": "logs",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Errors — $container",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 18 },
+      "datasource": { "uid": "loki", "type": "loki" },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 10 }
+            ]
+          },
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "loki", "type": "loki" },
+          "expr": "sum(count_over_time({job=\"journald\", container=~\"$container\", level=~\"err|crit|alert|emerg\"}[$__range]))",
+          "legendFormat": "errors",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Warnings — $container",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 18 },
+      "datasource": { "uid": "loki", "type": "loki" },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 5 },
+              { "color": "orange", "value": 50 }
+            ]
+          },
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "loki", "type": "loki" },
+          "expr": "sum(count_over_time({job=\"journald\", container=~\"$container\", level=\"warning\"}[$__range]))",
+          "legendFormat": "warnings",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "Unique Containers Matched",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 18 },
+      "datasource": { "uid": "loki", "type": "loki" },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "purple" },
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "loki", "type": "loki" },
+          "expr": "count(count by (container)(count_over_time({job=\"journald\", container=~\"$container\"}[$__range])))",
+          "legendFormat": "containers",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Log Rate — $container",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 22 },
+      "datasource": { "uid": "loki", "type": "loki" },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "lineWidth": 1, "fillOpacity": 10 },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "loki", "type": "loki" },
+          "expr": "sum(rate({job=\"journald\", container=~\"$container\"}[5m])) by (container)",
+          "legendFormat": "{{container}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Error Rate — $container",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 22 },
+      "datasource": { "uid": "loki", "type": "loki" },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["sum"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "lineWidth": 2, "fillOpacity": 15 },
+          "color": { "mode": "fixed", "fixedColor": "red" },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "loki", "type": "loki" },
+          "expr": "sum(rate({job=\"journald\", container=~\"$container\", level=~\"err|crit|alert|emerg\"}[5m])) by (container)",
+          "legendFormat": "{{container}} errors",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "logs",
+      "title": "Logs — $container",
+      "description": "Live log stream. Adjust time range or select a specific container from the top variable to drill in.",
+      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 30 },
+      "datasource": { "uid": "loki", "type": "loki" },
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "loki", "type": "loki" },
+          "expr": "{job=\"journald\", container=~\"$container\"}",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

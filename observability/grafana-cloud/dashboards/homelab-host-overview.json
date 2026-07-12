@@ -1,0 +1,377 @@
+{
+  "title": "Homelab — Host Overview",
+  "uid": "homelab-host-overview",
+  "description": "Raspberry Pi 5 host metrics shipped by Alloy → Grafana Cloud Prometheus (node_exporter, job=integrations/node_exporter, cluster=homelab)",
+  "schemaVersion": 39,
+  "version": 1,
+  "tags": ["homelab", "host", "node-exporter"],
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "1m",
+  "timezone": "browser",
+  "graphTooltip": 1,
+  "editable": true,
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Prometheus",
+        "query": "prometheus",
+        "current": { "selected": false, "text": "grafanacloud-prom", "value": "grafanacloud-prom" }
+      },
+      {
+        "name": "instance",
+        "type": "query",
+        "label": "Instance",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(node_uname_info{cluster=\"homelab\"}, instance)",
+        "refresh": 2,
+        "includeAll": false,
+        "multi": false,
+        "current": { "selected": false, "text": "raspberrypi", "value": "raspberrypi" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Health",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "collapsed": false
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Up",
+      "description": "Whether Prometheus is currently scraping this host",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 3, "x": 0, "y": 1 },
+      "targets": [
+        { "expr": "max(up{job=\"integrations/node_exporter\", instance=\"$instance\"})", "refId": "A" }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Uptime",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 3, "y": 1 },
+      "targets": [
+        { "expr": "time() - node_boot_time_seconds{instance=\"$instance\"}", "refId": "A" }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "unit": "s", "color": { "mode": "fixed", "fixedColor": "blue" } } }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "CPU usage",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 7, "y": 1 },
+      "targets": [
+        { "expr": "100 * (1 - avg(rate(node_cpu_seconds_total{instance=\"$instance\", mode=\"idle\"}[5m])))", "refId": "A" }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent", "min": 0, "max": 100,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null }, { "color": "yellow", "value": 70 }, { "color": "red", "value": 90 }
+          ]}
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Memory used",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 11, "y": 1 },
+      "targets": [
+        { "expr": "100 * (1 - (node_memory_MemAvailable_bytes{instance=\"$instance\"} / node_memory_MemTotal_bytes{instance=\"$instance\"}))", "refId": "A" }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent", "min": 0, "max": 100,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null }, { "color": "yellow", "value": 75 }, { "color": "red", "value": 90 }
+          ]}
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Root disk used",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 15, "y": 1 },
+      "targets": [
+        { "expr": "100 * (1 - (node_filesystem_avail_bytes{instance=\"$instance\", mountpoint=\"/host/root\"} / node_filesystem_size_bytes{instance=\"$instance\", mountpoint=\"/host/root\"}))", "refId": "A" }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent", "min": 0, "max": 100,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null }, { "color": "yellow", "value": 75 }, { "color": "red", "value": 90 }
+          ]}
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "CPU temperature",
+      "description": "Pi 5 throttles around 80 °C, hard limit at 85 °C",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 5, "x": 19, "y": 1 },
+      "targets": [
+        { "expr": "max(node_hwmon_temp_celsius{instance=\"$instance\"})", "refId": "A" }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null }, { "color": "yellow", "value": 65 }, { "color": "orange", "value": 75 }, { "color": "red", "value": 80 }
+          ]}
+        }
+      }
+    },
+
+    {
+      "id": 10,
+      "type": "row",
+      "title": "CPU & load",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "collapsed": false
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "CPU usage by mode",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "targets": [
+        { "expr": "sum by (mode) (rate(node_cpu_seconds_total{instance=\"$instance\", mode!=\"idle\"}[$__rate_interval])) / scalar(count(count by (cpu) (node_cpu_seconds_total{instance=\"$instance\"})))", "legendFormat": "{{mode}}", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit", "min": 0, "max": 1,
+          "custom": { "drawStyle": "line", "fillOpacity": 30, "stacking": { "mode": "normal" }, "lineWidth": 1 }
+        }
+      },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max"] } }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Load average",
+      "description": "Pi 5 has 4 cores — load > 4 means a backlog",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "targets": [
+        { "expr": "node_load1{instance=\"$instance\"}",  "legendFormat": "1m",  "refId": "A" },
+        { "expr": "node_load5{instance=\"$instance\"}",  "legendFormat": "5m",  "refId": "B" },
+        { "expr": "node_load15{instance=\"$instance\"}", "legendFormat": "15m", "refId": "C" },
+        { "expr": "count(count by (cpu) (node_cpu_seconds_total{instance=\"$instance\"}))", "legendFormat": "cores", "refId": "D" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 5 } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "cores" }, "properties": [
+            { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [10, 10] } },
+            { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
+          ]}
+        ]
+      },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["last", "max"] } }
+    },
+
+    {
+      "id": 20,
+      "type": "row",
+      "title": "Memory",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
+      "collapsed": false
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Memory breakdown",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+      "targets": [
+        { "expr": "node_memory_MemTotal_bytes{instance=\"$instance\"} - node_memory_MemFree_bytes{instance=\"$instance\"} - node_memory_Buffers_bytes{instance=\"$instance\"} - node_memory_Cached_bytes{instance=\"$instance\"} - node_memory_SReclaimable_bytes{instance=\"$instance\"}", "legendFormat": "used", "refId": "A" },
+        { "expr": "node_memory_Buffers_bytes{instance=\"$instance\"} + node_memory_Cached_bytes{instance=\"$instance\"} + node_memory_SReclaimable_bytes{instance=\"$instance\"}", "legendFormat": "buffers + cache", "refId": "B" },
+        { "expr": "node_memory_MemFree_bytes{instance=\"$instance\"}", "legendFormat": "free", "refId": "C" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "bytes", "custom": { "drawStyle": "line", "fillOpacity": 30, "stacking": { "mode": "normal" }, "lineWidth": 1 } }
+      },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["last"] } }
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Swap usage",
+      "description": "Sustained swap on a Pi (SD/USB) wears storage and tanks performance",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "targets": [
+        { "expr": "node_memory_SwapTotal_bytes{instance=\"$instance\"} - node_memory_SwapFree_bytes{instance=\"$instance\"}", "legendFormat": "swap used", "refId": "A" },
+        { "expr": "node_memory_SwapTotal_bytes{instance=\"$instance\"}", "legendFormat": "swap total", "refId": "B" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 10 } } },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["last", "max"] } }
+    },
+
+    {
+      "id": 30,
+      "type": "row",
+      "title": "Disk",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
+      "collapsed": false
+    },
+    {
+      "id": 31,
+      "type": "bargauge",
+      "title": "Filesystem usage",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 24 },
+      "targets": [
+        { "expr": "100 * (1 - (node_filesystem_avail_bytes{instance=\"$instance\", fstype!~\"tmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{instance=\"$instance\", fstype!~\"tmpfs|overlay|squashfs\"}))", "legendFormat": "{{mountpoint}}", "refId": "A" }
+      ],
+      "options": { "displayMode": "gradient", "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent", "min": 0, "max": 100,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null }, { "color": "yellow", "value": 75 }, { "color": "red", "value": 90 }
+          ]}
+        }
+      }
+    },
+    {
+      "id": 32,
+      "type": "timeseries",
+      "title": "Disk I/O — bytes/s",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 24 },
+      "targets": [
+        { "expr": "sum by (device) (rate(node_disk_read_bytes_total{instance=\"$instance\", device!~\"loop.*|dm-.*|ram.*\"}[$__rate_interval]))",    "legendFormat": "read {{device}}",  "refId": "A" },
+        { "expr": "-sum by (device) (rate(node_disk_written_bytes_total{instance=\"$instance\", device!~\"loop.*|dm-.*|ram.*\"}[$__rate_interval]))", "legendFormat": "write {{device}}", "refId": "B" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "Bps", "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 10 } } },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max"] } }
+    },
+    {
+      "id": 33,
+      "type": "timeseries",
+      "title": "Disk I/O — utilization",
+      "description": "Time the disk spent doing I/O (1.0 = saturated)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 24 },
+      "targets": [
+        { "expr": "rate(node_disk_io_time_seconds_total{instance=\"$instance\", device!~\"loop.*|dm-.*|ram.*\"}[$__rate_interval])", "legendFormat": "{{device}}", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit", "min": 0, "max": 1,
+          "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 10 },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 0.85 }] }
+        }
+      },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max"] } }
+    },
+
+    {
+      "id": 40,
+      "type": "row",
+      "title": "Network",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 32 },
+      "collapsed": false
+    },
+    {
+      "id": 41,
+      "type": "timeseries",
+      "title": "Network throughput",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 33 },
+      "targets": [
+        { "expr": "sum by (device) (rate(node_network_receive_bytes_total{instance=\"$instance\", device!~\"lo|veth.*|cni.*|podman.*\"}[$__rate_interval]))",     "legendFormat": "rx {{device}}", "refId": "A" },
+        { "expr": "-sum by (device) (rate(node_network_transmit_bytes_total{instance=\"$instance\", device!~\"lo|veth.*|cni.*|podman.*\"}[$__rate_interval]))", "legendFormat": "tx {{device}}", "refId": "B" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "Bps", "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 10 } } },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max"] } }
+    },
+    {
+      "id": 42,
+      "type": "timeseries",
+      "title": "Network errors / drops",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 33 },
+      "targets": [
+        { "expr": "rate(node_network_receive_errs_total{instance=\"$instance\", device!~\"lo|veth.*|cni.*|podman.*\"}[$__rate_interval])",   "legendFormat": "rx err {{device}}",  "refId": "A" },
+        { "expr": "rate(node_network_transmit_errs_total{instance=\"$instance\", device!~\"lo|veth.*|cni.*|podman.*\"}[$__rate_interval])",  "legendFormat": "tx err {{device}}",  "refId": "B" },
+        { "expr": "rate(node_network_receive_drop_total{instance=\"$instance\", device!~\"lo|veth.*|cni.*|podman.*\"}[$__rate_interval])",   "legendFormat": "rx drop {{device}}", "refId": "C" },
+        { "expr": "rate(node_network_transmit_drop_total{instance=\"$instance\", device!~\"lo|veth.*|cni.*|podman.*\"}[$__rate_interval])",  "legendFormat": "tx drop {{device}}", "refId": "D" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "pps", "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 10 } } },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max"] } }
+    },
+
+    {
+      "id": 50,
+      "type": "row",
+      "title": "Thermals & system",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 41 },
+      "collapsed": false
+    },
+    {
+      "id": 51,
+      "type": "timeseries",
+      "title": "Temperature sensors",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 42 },
+      "targets": [
+        { "expr": "node_hwmon_temp_celsius{instance=\"$instance\"}", "legendFormat": "{{chip}} {{sensor}}", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 10 },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null }, { "color": "yellow", "value": 65 }, { "color": "orange", "value": 75 }, { "color": "red", "value": 80 }
+          ]}
+        }
+      },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["last", "max"] } }
+    },
+    {
+      "id": 52,
+      "type": "timeseries",
+      "title": "Processes & file descriptors",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 42 },
+      "targets": [
+        { "expr": "node_procs_running{instance=\"$instance\"}",     "legendFormat": "running",    "refId": "A" },
+        { "expr": "node_procs_blocked{instance=\"$instance\"}",     "legendFormat": "blocked",    "refId": "B" },
+        { "expr": "node_filefd_allocated{instance=\"$instance\"}",  "legendFormat": "fds (alloc)", "refId": "C" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 5 } } },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["last", "max"] } }
+    }
+  ]
+}
