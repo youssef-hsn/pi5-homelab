@@ -1,0 +1,68 @@
+# Service Registry
+
+Last updated: 2026-07-08
+
+## Active Services
+
+| Service | Port (local) | Subdomain | Quadlet | Notes |
+|---------|-------------|-----------|---------|-------|
+| Traefik v3 | 80, 443 (host) | `proxy.youssefalhassan.com` | `traefik.container` | Reverse proxy, host-network, LetsEncrypt via DNS |
+| Authelia | 127.0.0.1:9100 | `auth.youssefalhassan.com` | `authelia.container` | SSO / forward-auth middleware |
+| VaultWarden | 127.0.0.1:8081 | `vw.youssefalhassan.com` | `vaultwarden.container` | Password manager; data in `infra/vault-warden/data` (note hyphenated dir) |
+| Home Assistant | 127.0.0.1:8123 (host-net) | `ha.youssefalhassan.com` | `home-assistant.container` | Smart home |
+| Monetr | 127.0.0.1:4000 | `mm.youssefalhassan.com` | *(check systemd)* | Financial app; depends on postgres |
+| Jellyfin | 127.0.0.1:8096 | `jf.youssefalhassan.com` | `jellyfin.container` | Media server |
+| PostgreSQL 16 | 192.168.0.69:5432 | — | `postgres.container` | Shared DB; network `postgres.network` |
+| Pi-hole | LAN | — | baremetal (system service) | DNS + DHCP; not containerized |
+| Syncthing | 127.0.0.1:8384 | — | — | File sync (LAN only); on hold, not yet deployed |
+| Nextcloud | 127.0.0.1:8082 | `cloud.youssefalhassan.com` | `infra/nextcloud/nextcloud.container` | File sync/cloud; OIDC via Authelia; always-on; custom image `localhost/nextcloud-memories:latest` built from `infra/nextcloud/Containerfile` adds ffmpeg + exiftool for the Memories app |
+| Alloy | 127.0.0.1:12345 | — | `alloy.container` | Ships journald logs + host metrics (node-exporter) to **Grafana Cloud**; credentials in `observability/alloy/credentials.env` |
+| Nefarious | 127.0.0.1:8002 | `nefarious.youssefalhassan.com` | `nefarious.container` | Media manager; depends on nefarious-redis, jackett, transmission |
+| Nefarious Redis | internal | — | `nefarious-redis.container` | Redis broker for Nefarious celery workers |
+| Jackett | 127.0.0.1:9117 | `jackett.youssefalhassan.com` (LAN-only via Pi-hole DNS) | `jackett.container` | Torrent indexer used by Nefarious; container name `jackett` (matches nefarious DB setting); on nefarious.network |
+| Transmission | 127.0.0.1:9091 | `transmission.youssefalhassan.com` (LAN-only via Pi-hole DNS) | `transmission.container` | Torrent downloader used by Nefarious; container name `transmission` (matches nefarious DB setting); ports 9091, 51413 |
+| Nefarious Celery | internal | — | `nefarious-celery.container` | Background download worker; uses `Entrypoint=/app/entrypoint-celery.sh` to override the image's web entrypoint |
+| Nefarious Celery Scheduler | internal | — | `nefarious-celery-scheduler.container` | Celery beat scheduler; uses `Entrypoint=/app/entrypoint-celery.sh` |
+| FlareSolverr | 127.0.0.1:8191 | — | `flaresolverr.container` | Shared Cloudflare bypass proxy; on nefarious.network; reachable at http://flaresolverr:8191 from same network or http://127.0.0.1:8191 from host |
+| Firefly III | 127.0.0.1:8080 | `fin.youssefalhassan.com` | `firefly.container` | Personal finance; depends on postgres (`postgres.network`) |
+| Hermes Agent | 127.0.0.1:8083 | `hermes.youssefalhassan.com` | `hermes.container` | Nous Research Hermes Agent (`docker.io/nousresearch/hermes-agent:v2026.7.1`); runs the headless `serve` gateway (`Exec=serve --host 0.0.0.0 --port 3000 --skip-build`). On `dario.network`; **uses dario as its LLM backend** via `ANTHROPIC_BASE_URL=http://dario:3456` + shared `ANTHROPIC_API_KEY` (config `infra/hermes/hermes.env`). State in volume `hermes-data` (`/opt/data`). Public via Cloudflare, **no Authelia** — auth is Hermes' own dashboard basic-auth (user `youssef`, scrypt `password_hash` in the volume's `config.yaml` under `dashboard.basic_auth`; a non-loopback bind refuses to start without it). Log in at `/login`. Traefik middleware `hermes-login-redirect` rewrites the buggy `/auth/login` auto-SSO bounce → `/login` (safe only while there's no OAuth provider). `dashboard.public_url=https://hermes.youssefalhassan.com`. **External DNS: needs a Cloudflare CNAME `hermes` → `cfb4f951-...cfargotunnel.com` (proxied)** — not scriptable here (no origin cert); LAN works now via Pi-hole split-horizon. |
+| Dario | 127.0.0.1:3456 | — (internal only) | `dario.container` | Claude-subscription proxy; shared LLM endpoint. Other containers join `dario.network` and reach it at `http://dario:3456`. Auth key in `infra/dario/dario.env` (`DARIO_API_KEY`); clients send it as `ANTHROPIC_API_KEY`. OAuth creds in volume `dario-data`. **Never exposed externally** (subscription relay). Health: `curl -H "authorization: Bearer $DARIO_API_KEY" http://127.0.0.1:3456/health` |
+| Odysseus | 127.0.0.1:7000 | `odysseus.youssefalhassan.com` | `odysseus.container` | Self-hosted AI workspace (chat/agents/research/docs/email/notes/calendar), built from source at `infra/odysseus/src` (upstream has no prebuilt image) via `podman build -t localhost/odysseus:latest`. Own auth (`AUTH_ENABLED=true`), **no Authelia** — admin password auto-generated on first boot, check `journalctl --user -u odysseus`. Config `infra/odysseus/odysseus.env`; data/logs bind-mounted from `infra/odysseus/data` and `infra/odysseus/logs`. On `odysseus.network` with its three sidecars below. **LLM backend intentionally left unconfigured** — Odysseus only speaks OpenAI-compatible/Ollama/LM-Studio wire formats, and it was *not* wired to `dario` (dario emulates Anthropic's API, which Odysseus can't call anyway, and routing another app's traffic through a Claude-subscription relay pushes further into ToS territory best not extended casually — see `infra/odysseus/odysseus.env` comments for how to point it at a real OpenAI key or a local Ollama instead). **External DNS: needs a Cloudflare CNAME `odysseus` → `cfb4f951-...cfargotunnel.com` (proxied) + a config.yml ingress entry** — user is handling the Cloudflare side directly this time. |
+| Odysseus ChromaDB | 127.0.0.1:8100 | — (internal only) | `odysseus-chromadb.container` | Vector store for Odysseus RAG/memory. On `odysseus.network`, reachable at `http://odysseus-chromadb:8000`. Data in volume `odysseus-chromadb-data`. |
+| Odysseus SearXNG | 127.0.0.1:8080 | — (internal only) | `odysseus-searxng.container` | Metasearch backend for Odysseus web search. Pinned image `searxng:2026.5.31-7159b8aed` (matches upstream's pin — newer tags have broken the healthcheck on boot). Settings pre-rendered with a real secret at `infra/odysseus/searxng-data/settings.yml` (skips upstream's templating entrypoint). On `odysseus.network`, reachable at `http://odysseus-searxng:8080`. |
+| Odysseus ntfy | 127.0.0.1:8091 | — (internal only) | `odysseus-ntfy.container` | Push notifications for Odysseus (reminders, task alerts). On `odysseus.network`. Cache in volume `odysseus-ntfy-cache`. |
+| Open WebUI | 127.0.0.1:8084 | `ai.youssefalhassan.com` | `open-webui.container` | ChatGPT-style chat frontend (`ghcr.io/open-webui/open-webui:main`); **uses dario as its LLM backend** via its standard OpenAI-compatible connection (`OPENAI_API_BASE_URLS=http://dario:3456/v1` + shared `DARIO_API_KEY` as `OPENAI_API_KEYS`, config `infra/open-webui/open-webui.env`). On `dario.network`. Ollama API disabled (`ENABLE_OLLAMA_API=false`, no local Ollama in this homelab). Own auth — first account created on `https://ai.youssefalhassan.com` becomes admin; **disable signups afterward** (Admin Settings → Users) since this is public via Cloudflare with no Authelia gate. Session signing key `WEBUI_SECRET_KEY` (keep stable — rotating it logs everyone out). Chats/users/uploads/RAG vector data in volume `open-webui-data` (`/app/backend/data`); this also caches the sentence-transformers embedding model pulled from HuggingFace on first boot (~800MB, one-time). |
+
+## Disabled / On-Hold Services
+
+| Service | Reason | Re-enable |
+|---------|--------|-----------|
+| Nginx | Replaced by Traefik (2026-04-19). Configs preserved. | `sudo systemctl stop cloudflared && systemctl --user stop traefik && sudo systemctl enable --now nginx` |
+| Syncthing | Not yet deployed; on hold. | Add quadlet when ready. |
+| Grafana (local) | Disabled 2026-05-10 — migrated to Grafana Cloud. Quadlet preserved at `grafana.container.disabled`. | `mv ~/.config/containers/systemd/grafana.container.disabled ~/.config/containers/systemd/grafana.container && systemctl --user daemon-reload && systemctl --user start grafana` |
+| Loki (local) | Disabled 2026-05-10 — logs now ship to Grafana Cloud Loki. Quadlet preserved at `loki.container.disabled`. Volume `loki-data` retained. | Restore quadlet, daemon-reload, start. Re-point Alloy `loki.write` at `http://loki:3100`. |
+| Prometheus (local) | Disabled 2026-05-03; never restored — Grafana Cloud Prometheus is now the metrics store. Quadlet preserved at `prometheus.container.disabled`. | Restore quadlet, daemon-reload, start. |
+| Pyroscope (local) | Disabled 2026-05-10 — profiling not currently shipped to Grafana Cloud (would need Pyroscope endpoint + scrape config in Alloy). Quadlet preserved at `pyroscope.container.disabled`. Volume `pyroscope-data` retained. | Restore quadlet, daemon-reload, start. Re-add `pyroscope.scrape` + `pyroscope.write` blocks in `alloy/config.alloy`. |
+| Sablier | Removed 2026-06-22 — container sleep/wake proxy dropped; all services now always-on. Files kept as backlog: quadlet `sablier.container.disabled`, middlewares `traefik/dynamic/sablier.yml.disabled`, config dir `traefik/sablier/`, and `.claude/commands/add-sablier.md`. | Restore both `.disabled` files (drop suffix), re-add the `experimental.plugins.sablier` block to `traefik.yml`, re-attach `middlewares: [sablier-*]` to the desired routers in `services.yml`, daemon-reload, start `sablier`, restart `traefik`. |
+
+## Cloudflare Tunnel Ingress
+
+Tunnel ID: `cfb4f951-81ba-415b-9846-9273b523631d`  
+Config: `/etc/cloudflared/config.yml` (sudo required)
+
+**DNS (2026-07-08):** `*.youssefalhassan.com` is now a wildcard CNAME → `cfb4f951-81ba-415b-9846-9273b523631d.cfargotunnel.com` (proxied) in the Cloudflare dashboard, added while registering `ai.youssefalhassan.com`. New subdomains no longer need their own DNS record — only the ingress entry below. (This supersedes the per-subdomain CNAME steps noted for Hermes/Odysseus further up this table — those were needed at the time but wouldn't be going forward.) See `docs/networking.md` DNS section for details.
+
+| Subdomain | Backend |
+|-----------|---------|
+| `pi5.youssefalhassan.com` | `ssh://localhost:22` |
+| `vw.youssefalhassan.com` | `https://localhost:443` |
+| `ha.youssefalhassan.com` | `https://localhost:443` |
+| `mm.youssefalhassan.com` | `https://localhost:443` |
+| `auth.youssefalhassan.com` | `https://localhost:443` |
+| `proxy.youssefalhassan.com` | `https://localhost:443` |
+| `jf.youssefalhassan.com` | `https://localhost:443` |
+| `cloud.youssefalhassan.com` | `https://localhost:443` |
+| `fin.youssefalhassan.com` | `https://localhost:443` |
+| `nefarious.youssefalhassan.com` | `https://localhost:443` |
+| `hermes.youssefalhassan.com` | `https://localhost:443` |
+| `ai.youssefalhassan.com` | `https://localhost:443` |
