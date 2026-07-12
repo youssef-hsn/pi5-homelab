@@ -1,0 +1,21 @@
+[Unit]
+Description=Nextcloud
+After=postgres.service network-online.target
+Wants=postgres.service
+
+[Container]
+ContainerName=nextcloud
+Image=docker.io/library/nextcloud:apache
+Network=postgres.network
+PublishPort=127.0.0.1:8082:80
+Volume=%h/infra/nextcloud/data:/var/www/html:Z
+EnvironmentFile=%h/infra/nextcloud/.env
+Environment=TZ=Asia/Beirut
+
+[Service]
+Restart=always
+RestartSec=10
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target
