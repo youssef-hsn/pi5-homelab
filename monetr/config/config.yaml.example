@@ -1,0 +1,28 @@
+# Copy to config.yaml, fill in the password below, and generate the JWT
+# signing key referenced by security.privateKey with:
+#   openssl genpkey -algorithm ed25519 -out ed25519.key
+environment: production
+allowSignUp: false
+
+server:
+  externalUrl: https://mm.youssefalhassan.com
+
+postgreSql:
+  address: postgres
+  port: 5432
+  username: monetr
+  password: "CHANGEME_must_match_MONETR_DB_PASSWORD_in_postgres/.env"
+  database: monetr
+
+redis:
+  enabled: false  # uses embedded miniredis — fine for single server
+
+logging:
+  level: info
+  format: text
+
+security:
+  privateKey: /etc/monetr/ed25519.key
+
+storage:
+  enabled: false

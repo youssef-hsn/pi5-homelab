@@ -1,0 +1,22 @@
+[Unit]
+Description=monetr financial management
+After=podman-user-wait-network-online.service postgres.service
+Wants=podman-user-wait-network-online.service
+Requires=podman-user-wait-network-online.service postgres.service
+
+[Container]
+ContainerName=monetr
+Image=ghcr.io/monetr/monetr:latest
+Network=postgres.network
+Volume=%h/infra/monetr/config:/etc/monetr:Z
+EnvironmentFile=%h/infra/monetr/.env
+Environment=TZ=Asia/Beirut
+PublishPort=127.0.0.1:4000:4000
+Exec=serve -c /etc/monetr/config.yaml -m
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target
