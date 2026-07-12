@@ -1,0 +1,20 @@
+[Unit]
+Description=Home Assistant container
+After=podman-user-wait-network-online.service
+Wants=podman-user-wait-network-online.service
+Requires=podman-user-wait-network-online.service
+
+[Container]
+ContainerName=homeassistant
+Image=ghcr.io/home-assistant/home-assistant:stable
+Volume=%h/infra/home-assistant/config:/config:Z
+Environment=TZ=Asia/Beirut
+Network=host
+SecurityLabelDisable=true
+
+[Service]
+Restart=always
+TimeoutStartSec=900
+
+[Install]
+WantedBy=default.target
