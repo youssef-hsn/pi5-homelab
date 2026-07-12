@@ -1,0 +1,22 @@
+[Unit]
+Description=VaultWarden container
+After=podman-user-wait-network-online.service
+Wants=podman-user-wait-network-online.service
+Requires=podman-user-wait-network-online.service
+
+[Container]
+ContainerName=vaultwarden
+Image=docker.io/vaultwarden/server:latest
+Volume=%h/infra/vault-warden/data:/data:Z
+Environment=TZ=Asia/Beirut
+Environment=DOMAIN=https://vw.youssefalhassan.com
+Environment=SIGNUPS_ALLOWED=false
+Environment=WEBSOCKET_ENABLED=true
+PublishPort=127.0.0.1:8081:80
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target
