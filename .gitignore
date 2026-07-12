@@ -1,0 +1,164 @@
+# ==========================================================================
+# Homelab infra .gitignore
+#
+# Philosophy: this repo tracks configuration (quadlets, Traefik/Authelia/
+# HA config, docs, scripts), never secrets or runtime data. Every real
+# secret file has a *.example sibling committed instead — copy it, fill in
+# real values, and never `git add -f` the real file.
+# ==========================================================================
+
+# --------------------------------------------------------------------------
+# Secrets: real env files. *.env.example files are NOT matched by this
+# pattern (their basename ends in ".example", not ".env") so they stay
+# tracked.
+# --------------------------------------------------------------------------
+*.env
+
+# --------------------------------------------------------------------------
+# Vendored third-party checkouts with their own nested .git — never vendor
+# another repo's .git into this one (breaks `git add`, turns into a
+# dangling gitlink). Clone these separately per docs/services.md; they also
+# each ship their own env.template / .env.example upstream.
+# --------------------------------------------------------------------------
+/nefarious/
+/odysseus/src/
+
+# --------------------------------------------------------------------------
+# Per-service runtime data, caches, logs, databases — regenerated at
+# runtime, not configuration, and often huge (media libraries, DB files).
+# --------------------------------------------------------------------------
+/nextcloud/data/
+/jellyfin/cache/
+/jellyfin/config/
+/pi-hole/etc-pihole/
+/pi-hole/etc-dnsmasq.d/
+/postgres/data/
+/vault-warden/data/
+/syncthing/data/
+/syncthing/config/
+/odysseus/data/
+/odysseus/logs/
+# Rendered SearXNG settings — contains a live secret_key, not a template.
+/odysseus/searxng-data/
+/authelia/data/
+/authelia/db.sqlite3
+/authelia/notification.txt
+/traefik/acme/
+/traefik/sablier/sessions.json
+/cloudflare/*.deb
+
+# Home Assistant: keep configuration.yaml / automations.yaml / scripts.yaml
+# / scenes.yaml, drop everything generated at runtime.
+/home-assistant/config/deps/
+/home-assistant/config/.storage/
+/home-assistant/config/.cloud/
+/home-assistant/config/tts/
+/home-assistant/config/*.log
+/home-assistant/config/*.log.*
+/home-assistant/config/*.db
+/home-assistant/config/*.db-*
+/home-assistant/config/.ha_run.lock
+/home-assistant/config/.HA_VERSION
+/home-assistant/config/secrets.yaml
+
+# --------------------------------------------------------------------------
+# Files with secrets embedded directly (not env-file shaped) — each has a
+# *.example / README sibling tracked instead.
+# --------------------------------------------------------------------------
+/authelia/users_database.yml
+/authelia/secrets/*
+!/authelia/secrets/README.md
+/monetr/config/config.yaml
+/monetr/config/ed25519.key
+
+# --------------------------------------------------------------------------
+# Claude Code local state — machine-specific, not shared config. Slash
+# commands in .claude/commands/ and the shared settings.json ARE tracked.
+# --------------------------------------------------------------------------
+**/.claude/settings.local.json
+**/.claude/scheduled_tasks.lock
+
+# --------------------------------------------------------------------------
+# Defense in depth: blanket key/cert/credential/db patterns. Everything
+# matching these today is already covered above by a more specific rule —
+# this net is here to catch whatever gets added next.
+# --------------------------------------------------------------------------
+*.pem
+*.key
+*.p12
+*.pfx
+*.der
+id_rsa*
+id_ed25519*
+id_ecdsa*
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-shm
+*.db-wal
+*.htpasswd
+*_history
+
+# --------------------------------------------------------------------------
+# OS / editor junk
+# --------------------------------------------------------------------------
+.DS_Store
+*.swp
+*.swo
+*~
+
+# --------------------------------------------------------------------------
+# Hardening: defense-in-depth for secrets / keys / state that may be added
+# later. None of these match a currently-tracked file.
+# --------------------------------------------------------------------------
+# More cert / key / credential formats
+*.crt
+*.cer
+*.csr
+*.p8
+*.jks
+*.keystore
+*.gpg
+*.asc
+*.kdbx
+*.age
+.netrc
+.pgpass
+*.pgpass
+known_hosts
+authorized_keys
+*.ovpn
+wg*.conf
+
+# Cloud / IaC state that embeds secrets
+*.tfstate
+*.tfstate.*
+*.tfvars
+.envrc
+kubeconfig
+*.kubeconfig
+
+# Logs (runtime data, not config)
+*.log
+*.log.*
+
+# Backups / temp / merge cruft
+*.bak
+*.old
+*.orig
+*.rej
+*.tmp
+
+# Language / build caches
+__pycache__/
+*.pyc
+*.pyo
+node_modules/
+.venv/
+venv/
+
+# More OS / editor junk
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
