@@ -1,0 +1,26 @@
+# Codex proxy — exposes your ChatGPT Plus/Pro Codex quota as an OpenAI-compatible
+# API (github.com/wowyuarm/codex-proxy). Upstream ships no image, so we build from
+# source, mirroring how odysseus is built. Runs as non-root user `codex`; OAuth
+# credentials live in the mounted volume at /home/codex/.codex-proxy.
+FROM python:3.12-slim-bookworm
+
+# Upstream has no releases/tags. To pin a build, replace the tarball URL below with
+# a git ref, e.g.  pip install "codex-proxy @ git+https://github.com/wowyuarm/codex-proxy.git@<sha>"
+ARG CODEX_PROXY_REF=main
+
+RUN useradd --create-home --uid 10001 codex \
+ && pip install --no-cache-dir \
+      "https://github.com/wowyuarm/codex-proxy/archive/refs/heads/${CODEX_PROXY_REF}.tar.gz"
+
+USER codex
+WORKDIR /home/codex
+
+# Persisted by the codex-data volume: credentials.json + accounts/*.json.
+VOLUME ["/home/codex/.codex-proxy"]
+
+# OpenAI-compatible surface at /v1 (GET /v1/models, POST /v1/chat/completions).
+EXPOSE 8787
+
+# `serve` / `login` / `accounts` / `switch` subcommands. The quadlet passes `Exec=serve ...`.
+ENTRYPOINT ["codex-proxy"]
+CMD ["serve", "--host", "0.0.0.0", "--port", "8787"]
