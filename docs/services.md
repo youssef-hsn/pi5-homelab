@@ -6,7 +6,7 @@ Last updated: 2026-07-08
 
 | Service | Port (local) | Subdomain | Quadlet | Notes |
 |---------|-------------|-----------|---------|-------|
-| Traefik v3 | 80, 443 (host) | `proxy.youssefalhassan.com` | `traefik.container` | Reverse proxy, host-network, LetsEncrypt via DNS |
+| Traefik v3 | 80, 443 (host) | `proxy.youssefalhassan.com` | `traefik.container` | Reverse proxy, host-network, LetsEncrypt via DNS. Serves a `*.youssefalhassan.com` wildcard as the store **default cert** (`dynamic/tls.yml` → `certs/default.{crt,key}`, mirrored from `acme.json` by `extract-default-cert.py` / `traefik-default-cert.timer`) so no self-signed cert is served during the restart window — see `docs/networking.md`. |
 | Authelia | 127.0.0.1:9100 | `auth.youssefalhassan.com` | `authelia.container` | SSO / forward-auth middleware |
 | VaultWarden | 127.0.0.1:8081 | `vw.youssefalhassan.com` | `vaultwarden.container` | Password manager; data in `infra/vault-warden/data` (note hyphenated dir) |
 | Home Assistant | 127.0.0.1:8123 (host-net) | `ha.youssefalhassan.com` | `home-assistant.container` | Smart home |

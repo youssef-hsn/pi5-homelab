@@ -35,6 +35,13 @@ http:
       middlewares: [authelia]
       tls:
         certResolver: letsencrypt
+        # Issues + auto-renews the zone wildcard in acme.json. It's mirrored to
+        # PEM (extract-default-cert.py) and served as the default cert to close
+        # the restart-window self-signed gap. See dynamic/tls.yml.
+        domains:
+          - main: "youssefalhassan.com"
+            sans:
+              - "*.youssefalhassan.com"
 
     jellyfin:
       rule: "Host(`jf.youssefalhassan.com`)"

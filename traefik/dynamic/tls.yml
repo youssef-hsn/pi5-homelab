@@ -1,0 +1,26 @@
+# Default TLS certificate for the whole zone.
+#
+# Purpose: during a Traefik restart there is a brief window after :443 reopens
+# but before per-host certs load from acme.json. Without a default cert, Traefik
+# serves its built-in self-signed "TRAEFIK DEFAULT CERT" during that window. On
+# the LAN direct-to-Traefik path, a browser holding the zone's HSTS pin then gets
+# a *sticky, unbypassable* cert error for whatever subdomain it hit. See
+# docs/networking.md (the fin. self-signed-cert outage).
+#
+# A valid wildcard as the store default means any SNI — matched, unmatched, or
+# not-yet-loaded — is served a trusted cert instead of the self-signed fallback.
+tls:
+  stores:
+    default:
+      # Served during the restart window: file-provider certs load before ACME
+      # certs come out of acme.json, so this closes the self-signed gap that
+      # otherwise re-poisons HSTS-pinned browsers on the LAN direct path.
+      #
+      # This is the *.youssefalhassan.com wildcard, mirrored from acme.json by
+      # extract-default-cert.py (traefik-default-cert.timer, daily). The wildcard
+      # is issued/renewed by the tls.domains block on the traefik-dashboard
+      # router in services.yml. (defaultCertificate and defaultGeneratedCert are
+      # mutually exclusive in Traefik, so renewal is driven from a router.)
+      defaultCertificate:
+        certFile: /etc/traefik/certs/default.crt
+        keyFile: /etc/traefik/certs/default.key
