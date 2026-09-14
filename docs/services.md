@@ -1,6 +1,6 @@
 # Service Registry
 
-Last updated: 2026-07-23
+Last updated: 2026-09-13
 
 ## Active Services
 
@@ -32,6 +32,7 @@ Last updated: 2026-07-23
 | Odysseus ChromaDB | 127.0.0.1:8100 | — (internal only) | `odysseus-chromadb.container` | Vector store for Odysseus RAG/memory. On `odysseus.network`, reachable at `http://odysseus-chromadb:8000`. Data in volume `odysseus-chromadb-data`. |
 | Odysseus SearXNG | 127.0.0.1:8080 | — (internal only) | `odysseus-searxng.container` | Metasearch backend for Odysseus web search. Pinned image `searxng:2026.5.31-7159b8aed` (matches upstream's pin — newer tags have broken the healthcheck on boot). Settings pre-rendered with a real secret at `infra/odysseus/searxng-data/settings.yml` (skips upstream's templating entrypoint). On `odysseus.network`, reachable at `http://odysseus-searxng:8080`. |
 | Odysseus ntfy | 127.0.0.1:8091 | — (internal only) | `odysseus-ntfy.container` | Push notifications for Odysseus (reminders, task alerts). On `odysseus.network`. Cache in volume `odysseus-ntfy-cache`. |
+| Memos | 127.0.0.1:5230 | `memos.youssefalhassan.com` | `memos.container` | Lightweight note/memo hub (`docker.io/neosmemo/memos:stable`). **Uses the shared PostgreSQL server** (`postgres.network`, DB `memos`, role `memos`) via `MEMOS_DRIVER=postgres` + `MEMOS_DSN` (config `infra/memos/memos.env`; DB password mirrored in `postgres/.env` `MEMOS_DB_PASSWORD`, init parity in `postgres/initdb/03-memos.sh`). Local working dir (uploaded resources/thumbnails) in volume `memos-data` (`/var/opt/memos`) — the data itself lives in Postgres. Own auth — first account created on `https://memos.youssefalhassan.com` becomes host/admin; **disable signups afterward** (Settings → Workspace → disallow user signup) since this is public via Cloudflare with no Authelia gate. |
 | Open WebUI | 127.0.0.1:8084 | `ai.youssefalhassan.com` | `open-webui.container` | ChatGPT-style chat frontend (`ghcr.io/open-webui/open-webui:main`); **uses dario + codex as its LLM backends** via two standard OpenAI-compatible connections — `OPENAI_API_BASE_URLS=http://dario:3456/v1;http://codex:8787/v1` with `OPENAI_API_KEYS=<DARIO_API_KEY>;<CODEX_PROXY_API_KEY>` (';'-separated, index-matched; config `infra/open-webui/open-webui.env`). Both surface their models in one picker; if a backend is down Open WebUI just hides its models. On `dario.network`. Ollama API disabled (`ENABLE_OLLAMA_API=false`, no local Ollama in this homelab). Own auth — first account created on `https://ai.youssefalhassan.com` becomes admin; **disable signups afterward** (Admin Settings → Users) since this is public via Cloudflare with no Authelia gate. Session signing key `WEBUI_SECRET_KEY` (keep stable — rotating it logs everyone out). Chats/users/uploads/RAG vector data in volume `open-webui-data` (`/app/backend/data`); this also caches the sentence-transformers embedding model pulled from HuggingFace on first boot (~800MB, one-time). **Soft-depends on dario + codex** (`Wants=dario.service codex.service`, **not** `Requires=` — an auth lapse in either must not crash-loop/502 the whole UI; the frontend stays reachable and just hides that backend's models until it recovers). |
 
 ## Disabled / On-Hold Services
@@ -67,3 +68,4 @@ Config: `/etc/cloudflared/config.yml` (sudo required)
 | `nefarious.youssefalhassan.com` | `https://localhost:443` |
 | `hermes.youssefalhassan.com` | `https://localhost:443` |
 | `ai.youssefalhassan.com` | `https://localhost:443` |
+| `memos.youssefalhassan.com` | `https://localhost:443` |

@@ -107,6 +107,13 @@ http:
       tls:
         certResolver: letsencrypt
 
+    memos:
+      rule: "Host(`memos.youssefalhassan.com`)"
+      entryPoints: [websecure]
+      service: memos
+      tls:
+        certResolver: letsencrypt
+
   services:
     authelia:
       loadBalancer:
@@ -172,3 +179,8 @@ http:
       loadBalancer:
         servers:
           - url: "http://127.0.0.1:8084"
+
+    memos:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:5230"

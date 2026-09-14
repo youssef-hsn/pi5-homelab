@@ -54,12 +54,20 @@ LAN-only services (no Cloudflare tunnel) get a Pi-hole local DNS record pointing
 
 ```toml
 dnsmasq_lines = [
+  "filter-rr=64,65",                             # drop SVCB/HTTPS records network-wide — kills the ECH leak; see below
   "address=/youssefalhassan.com/192.168.0.69",   # A  → Pi (Traefik terminates TLS with the real LE cert)
-  "address=/youssefalhassan.com/::"              # AAAA → sinkhole; MUST keep — see below
+  "address=/youssefalhassan.com/::",             # AAAA → sinkhole; MUST keep — see below
+  "server=/storybook.youssefalhassan.com/#",     # carve-out → resolve upstream (Cloudflare), not the Pi
+  "server=/vw.youssefalhassan.com/#",            # carve-out → Vaultwarden via Cloudflare tunnel on LAN too
+  "server=/itar.youssefalhassan.com/#"           # carve-out → Cloudflare Pages app (not hosted on the Pi)
 ]
 ```
 
+**Per-host carve-outs (`server=/host/#`):** the zone-wide `address=/youssefalhassan.com/...` lines catch **every** subdomain, including names that don't live on the Pi (e.g. a Cloudflare Pages app) or that you deliberately want LAN clients to reach via the Cloudflare tunnel. dnsmasq resolves by longest-domain match, so a more-specific `server=/<host>.youssefalhassan.com/#` overrides the wildcard for that one name; `#` means "use the configured upstream" (Cloudflare), returning the real A/AAAA that the outside world sees. Add one line per name and `sudo systemctl restart pihole-FTL`. Current carve-outs: `storybook` (Pages), `vw` (Vaultwarden — chosen to hairpin through the tunnel on LAN), `itar` (Pages). Note: a carve-out's AAAA is no longer sinkholed — it returns Cloudflare's real IPv6, which is fine because the client reaches Cloudflare over both v4 and v6 (no split-brain), *not* Traefik directly.
+
 **Why the `::` line matters (was the cause of a self-signed-cert outage on `fin.`):** FTL only applies the IPv4 `address=` override to A queries — AAAA queries for these names leak upstream and return Cloudflare's real IPv6. The Pi has **no IPv6**, so a dual-stack browser split-brains: it reaches Cloudflare over v6 (valid cert + HSTS pin) but Traefik directly over v4. Any moment Traefik serves its `TRAEFIK DEFAULT CERT` (self-signed fallback for an unmatched SNI, e.g. during a restart before `acme.json` loads) then becomes an **unbypassable** `MOZILLA_PKIX_ERROR_SELF_SIGNED_CERT` block because of the HSTS pin. The `::` sinkhole makes FTL authoritative for AAAA, so browsers fail-fast on v6 and consistently use IPv4 → Traefik → valid cert. Apply changes with `sudo systemctl restart pihole-FTL`.
+
+**Why the `filter-rr=64,65` line matters (was the cause of an `SSL_ERROR_BAD_CERT_DOMAIN` on `vw.`):** the `address=` override rewrites **only A/AAAA** — it does *not* touch the type-65 `HTTPS` (and type-64 `SVCB`) record, which leaks upstream and returns Cloudflare's, complete with an `ech=` (Encrypted Client Hello) config whose public name is `cloudflare-ech.com`. A dual-stack, ECH-capable browser (Zen/Firefox, ECH on by default) then resolves `vw` → Pi via the A override but, seeing the ECH config, opens the TLS connection to the Pi with an **outer SNI of `cloudflare-ech.com`** instead of `vw.…`. Traefik doesn't speak ECH, matches no router for that SNI, and falls back to the **store default cert** (the `*.youssefalhassan.com` wildcard) — producing an SNI/cert mismatch the browser reports as an impersonation warning (`SSL_ERROR_BAD_CERT_DOMAIN`, "valid for `*.youssefalhassan.com, youssefalhassan.com`"). It only happens on the LAN; externally the browser really reaches Cloudflare, which *does* support ECH. `filter-rr=64,65` makes FTL strip SVCB/HTTPS records network-wide, so no `ech=` reaches LAN clients and browsers connect with a plaintext `Host`-matching SNI → Traefik serves the per-host cert. Trade-off: disables ECH and SVCB-based HTTP/3 fast-discovery network-wide (browsers still find h3 via `Alt-Svc`); accumulates with FTL's own `filter-rr=ANY`. Apply with `sudo systemctl restart pihole-FTL`; a browser that cached the bad HTTPS record/error needs its DNS+site state cleared (or wait out the record TTL).
 
 ### Traefik default certificate — closes the restart self-signed window
 

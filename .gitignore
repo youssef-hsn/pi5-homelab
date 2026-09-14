@@ -35,6 +35,7 @@
 /postgres/data/
 /vault-warden/data/
 /vault-warden/backups/
+/vault-warden//
 /syncthing/data/
 /syncthing/config/
 /odysseus/data/
