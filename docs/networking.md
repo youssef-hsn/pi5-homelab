@@ -24,8 +24,8 @@ Internet → Cloudflare Tunnel (cfb4f951) → localhost:443 → Traefik → serv
 |---------|------|---------|
 | `postgres` | `postgres.network` | postgres, monetr, authelia |
 | `observability` | `observability.network` | prometheus, loki, grafana, alloy |
-| `dario` | `dario.network` | dario (Claude proxy) `http://dario:3456`, codex (ChatGPT/Codex proxy) `http://codex:8787`, hermes, open-webui; join from client containers to reach either LLM endpoint |
-| `odysseus` | `odysseus.network` | odysseus, odysseus-chromadb, odysseus-searxng, odysseus-ntfy |
+| `dario` | `dario.network` | dario (Claude proxy) `http://dario:3456`, codex (ChatGPT/Codex proxy) `http://codex:8787`, hermes, open-webui; join from client containers to reach either LLM endpoint. **All members disabled 2026-09-14 — network definition retained (see `docs/services.md` Disabled table).** |
+| `odysseus` | `odysseus.network` | odysseus, odysseus-chromadb, odysseus-searxng, odysseus-ntfy. **Entire stack disabled 2026-09-14 — network definition retained (see `docs/services.md` Disabled table).** |
 | `host` | (native) | traefik, home-assistant |
 
 ## DNS

@@ -57,12 +57,13 @@ http:
       tls:
         certResolver: letsencrypt
 
-    firefly:
-      rule: "Host(`fin.youssefalhassan.com`)"
-      entryPoints: [websecure]
-      service: firefly
-      tls:
-        certResolver: letsencrypt
+    # DISABLED 2026-09-14 (unused; re-enable with /enable-service firefly)
+    # firefly:
+    #   rule: "Host(`fin.youssefalhassan.com`)"
+    #   entryPoints: [websecure]
+    #   service: firefly
+    #   tls:
+    #     certResolver: letsencrypt
 
     nefarious:
       rule: "Host(`nefarious.youssefalhassan.com`)"
@@ -85,27 +86,30 @@ http:
       tls:
         certResolver: letsencrypt
 
-    hermes:
-      rule: "Host(`hermes.youssefalhassan.com`)"
-      entryPoints: [websecure]
-      service: hermes
-      middlewares: [hermes-login-redirect]
-      tls:
-        certResolver: letsencrypt
+    # DISABLED 2026-09-14 (unused; re-enable with /enable-service hermes)
+    # hermes:
+    #   rule: "Host(`hermes.youssefalhassan.com`)"
+    #   entryPoints: [websecure]
+    #   service: hermes
+    #   middlewares: [hermes-login-redirect]
+    #   tls:
+    #     certResolver: letsencrypt
 
-    odysseus:
-      rule: "Host(`odysseus.youssefalhassan.com`)"
-      entryPoints: [websecure]
-      service: odysseus
-      tls:
-        certResolver: letsencrypt
+    # DISABLED 2026-09-14 (unused; re-enable with /enable-service odysseus)
+    # odysseus:
+    #   rule: "Host(`odysseus.youssefalhassan.com`)"
+    #   entryPoints: [websecure]
+    #   service: odysseus
+    #   tls:
+    #     certResolver: letsencrypt
 
-    open-webui:
-      rule: "Host(`ai.youssefalhassan.com`)"
-      entryPoints: [websecure]
-      service: open-webui
-      tls:
-        certResolver: letsencrypt
+    # DISABLED 2026-09-14 (unused; re-enable with /enable-service open-webui)
+    # open-webui:
+    #   rule: "Host(`ai.youssefalhassan.com`)"
+    #   entryPoints: [websecure]
+    #   service: open-webui
+    #   tls:
+    #     certResolver: letsencrypt
 
     memos:
       rule: "Host(`memos.youssefalhassan.com`)"
@@ -145,10 +149,11 @@ http:
         servers:
           - url: "http://127.0.0.1:8082"
 
-    firefly:
-      loadBalancer:
-        servers:
-          - url: "http://127.0.0.1:8080"
+    # DISABLED 2026-09-14
+    # firefly:
+    #   loadBalancer:
+    #     servers:
+    #       - url: "http://127.0.0.1:8080"
 
     nefarious:
       loadBalancer:
@@ -165,20 +170,23 @@ http:
         servers:
           - url: "http://127.0.0.1:9117"
 
-    hermes:
-      loadBalancer:
-        servers:
-          - url: "http://127.0.0.1:8083"
+    # DISABLED 2026-09-14
+    # hermes:
+    #   loadBalancer:
+    #     servers:
+    #       - url: "http://127.0.0.1:8083"
 
-    odysseus:
-      loadBalancer:
-        servers:
-          - url: "http://127.0.0.1:7000"
+    # DISABLED 2026-09-14
+    # odysseus:
+    #   loadBalancer:
+    #     servers:
+    #       - url: "http://127.0.0.1:7000"
 
-    open-webui:
-      loadBalancer:
-        servers:
-          - url: "http://127.0.0.1:8084"
+    # DISABLED 2026-09-14
+    # open-webui:
+    #   loadBalancer:
+    #     servers:
+    #       - url: "http://127.0.0.1:8084"
 
     memos:
       loadBalancer:
